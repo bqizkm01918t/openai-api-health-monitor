@@ -68,6 +68,7 @@
 | `OPENAI_TEMPERATURE` | 否 | `0.1` | 请求的 `temperature`。 |
 | `OPENAI_REQUEST_PAUSE_SECONDS` | 否 | `0` | 两次请求间额外停顿秒数。 |
 | `OPENAI_README_PATH` | 否 | `README.md` | 结果写入的 README 路径。 |
+| `OPENAI_FAIL_WORKFLOW_ON_ERROR` | 否 | `false` | 是否在请求失败时让 workflow 标红；仅当值为 `true` 时失败。 |
 
 ---
 
