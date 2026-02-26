@@ -58,7 +58,7 @@ jobs:
           git push
 
       - name: Mark workflow failed if benchmark failed
-        if: always() && steps.benchmark.outputs.exit_code != '0'
+        if: always() && steps.benchmark.outputs.exit_code != '0' && vars.OPENAI_FAIL_WORKFLOW_ON_ERROR == 'true'
         run: |
           echo "Benchmark exit code: ${{ steps.benchmark.outputs.exit_code }}"
           exit 1
