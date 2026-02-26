@@ -1,0 +1,64 @@
+name: OpenAI API Availability
+
+on:
+  schedule:
+    # GitHub Actions uses UTC. 18:00 UTC == 02:00 (next day) Asia/Shanghai.
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: openai-api-availability
+  cancel-in-progress: false
+
+jobs:
+  run-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run sequential streaming requests
+        id: benchmark
+        env:
+          TZ: Asia/Shanghai
+          OPENAI_API_URL: ${{ vars.OPENAI_API_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          OPENAI_PROMPT: ${{ vars.OPENAI_PROMPT }}
+          OPENAI_REQUEST_COUNT: ${{ vars.OPENAI_REQUEST_COUNT }}
+          OPENAI_REQUEST_TIMEOUT_SECONDS: ${{ vars.OPENAI_REQUEST_TIMEOUT_SECONDS }}
+          OPENAI_MAX_RUNTIME_SECONDS: ${{ vars.OPENAI_MAX_RUNTIME_SECONDS }}
+          OPENAI_MAX_TOKENS: ${{ vars.OPENAI_MAX_TOKENS }}
+          OPENAI_TEMPERATURE: ${{ vars.OPENAI_TEMPERATURE }}
+          OPENAI_REQUEST_PAUSE_SECONDS: ${{ vars.OPENAI_REQUEST_PAUSE_SECONDS }}
+          OPENAI_README_PATH: ${{ vars.OPENAI_README_PATH }}
+        run: |
+          set +e
+          python3 scripts/openai_stream_benchmark.py
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit README result
+        if: always()
+        run: |
+          if [ -z "$(git status --porcelain README.md)" ]; then
+            echo "README.md unchanged, skip commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update OpenAI availability result"
+          git push
+
+      - name: Mark workflow failed if benchmark failed
+        if: always() && steps.benchmark.outputs.exit_code != '0'
+        run: |
+          echo "Benchmark exit code: ${{ steps.benchmark.outputs.exit_code }}"
+          exit 1
